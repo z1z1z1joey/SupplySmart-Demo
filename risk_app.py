@@ -3,6 +3,9 @@ import pandas as pd
 import time
 import gspread
 from google.oauth2.service_account import Credentials
+import feedparser
+import google.generativeai as genai
+import json
 
 # ==========================================
 # 網頁基本設定
@@ -34,10 +37,78 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1Nc3WJ3vD7YvtY1s54pKwTMwZjNL
 # ==========================================
 st.sidebar.title("SupplySmart AI")
 st.sidebar.caption("v2.0 雲端資料庫完全體")
-page = st.sidebar.radio(
-    "請選擇功能模組：", 
-    ["🚨 風險預警與自動補料", "📦 庫存管理中心 (CRUD)"]
-)
+# ==========================================
+# 模組 C：AI 即時情報雷達 (真實聯網分析)
+# ==========================================
+elif page == "📡 AI 即時情報雷達":
+    st.title("📡 SupplySmart：即時 AI 情報雷達")
+    st.write("點擊下方按鈕，系統將自動抓取 Yahoo 財經最新新聞，並交由 Gemini AI 逐條分析斷鏈風險。")
+
+    # 讀取金鑰並設定 AI
+    try:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(
+            'gemini-1.5-flash',
+            generation_config={"response_mime_type": "application/json"}
+        )
+    except Exception as e:
+        st.error("請確認 Streamlit Secrets 中已設定 GEMINI_API_KEY")
+        st.stop()
+
+    def analyze_news_risk(title, summary):
+        prompt = f"""
+        你是一位專業的「全球供應鏈風險分析師」。
+        請閱讀以下新聞標題與摘要，評估它是否對科技製造業、半導體或物流業造成斷鏈風險。
+        
+        新聞標題：{title}
+        新聞摘要：{summary}
+        
+        請嚴格使用以下 JSON 格式輸出你的分析結果：
+        {{
+            "Risk_Level": "High" 或 "Medium" 或 "Low" 或 "None",
+            "Location": "事件發生的國家或地區 (若無則填 Unknown)",
+            "Keywords": ["受影響的產業", "材料", "或是零件名稱的陣列"],
+            "Reason": "用一句話解釋為何有此風險"
+        }}
+        """
+        try:
+            response = model.generate_content(prompt)
+            return json.loads(response.text) 
+        except Exception as e:
+            return {"Risk_Level": "Error", "Reason": str(e)}
+
+    if st.button("🚀 啟動即時新聞掃描", type="primary"):
+        rss_url = "https://tw.news.yahoo.com/rss/finance"
+        
+        with st.spinner("正在從網路抓取最新新聞..."):
+            feed = feedparser.parse(rss_url)
+            news_items = feed.entries[:3] # 取最新 3 篇
+        
+        st.success(f"✅ 成功抓取 {len(news_items)} 篇最新新聞！AI 正在進行語意分析...")
+        cols = st.columns(3)
+        
+        for idx, entry in enumerate(news_items):
+            with cols[idx]:
+                st.markdown(f"**📰 {entry.title}**")
+                with st.spinner("AI 判讀中..."):
+                    analysis = analyze_news_risk(entry.title, entry.summary)
+                    time.sleep(1.5) # 稍微暫停，避免打 API 太快
+                
+                risk_level = analysis.get("Risk_Level", "Unknown")
+                if risk_level == "High":
+                    st.error("🚨 判定：高風險 (High)")
+                elif risk_level == "Medium":
+                    st.warning("⚠️ 判定：中風險 (Medium)")
+                elif risk_level == "Low":
+                    st.info("🟢 判定：低風險 (Low)")
+                else:
+                    st.success("✅ 判定：無相關風險 (None)")
+                    
+                st.write(f"📍 **地區：** {analysis.get('Location')}")
+                st.write(f"🔑 **關鍵字：** {', '.join(analysis.get('Keywords', []))}")
+                st.caption(f"🧠 **理由：** {analysis.get('Reason')}")
+                st.markdown(f"[閱讀原文]({entry.link})")
 st.sidebar.divider()
 st.sidebar.info("💡 提示：雙模組皆已串接 Google Sheets API，資料即時同步。")
 
