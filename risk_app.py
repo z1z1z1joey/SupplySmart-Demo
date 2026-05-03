@@ -7,9 +7,19 @@ st.set_page_config(page_title="SupplySmart AI 風險聯動系統", layout="wide"
 st.title("🚨 SupplySmart AI：風險預警與自動補料流程")
 
 # --- 讀取資料庫 (Excel/CSV) ---
-@st.cache_data
+# 升級：讀取線上 Google Sheets 的寫法
+@st.cache_data(ttl=60) # 設定每 60 秒強制重新抓取一次最新資料
 def load_data():
-    return pd.read_csv("inventory.csv")
+    # 請把下面的網址換成你在步驟 1 複製的 Google Sheets CSV 網址
+    sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-你的專屬亂碼/pub?gid=0&single=true&output=csv"
+    
+    # 加上 try-except 以防網路連線問題
+    try:
+        df = pd.read_csv(sheet_url)
+        return df
+    except Exception as e:
+        st.error("無法連線至 Google Sheets，請檢查網址或網路設定。")
+        return pd.DataFrame() # 回傳空表以防程式崩潰
 
 df = load_data()
 
