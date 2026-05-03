@@ -11,7 +11,7 @@ st.title("🚨 SupplySmart AI：風險預警與自動補料流程")
 @st.cache_data(ttl=60) # 設定每 60 秒強制重新抓取一次最新資料
 def load_data():
     # 請把下面的網址換成你在步驟 1 複製的 Google Sheets CSV 網址
-    sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-你的專屬亂碼/pub?gid=0&single=true&output=csv"
+    sheet_url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQoxb_vbiOKkp-a229cpLDFXZl5G5VEO6nqnvSFwpK-l21CvCIY_wAfUfBGvAgu-MDGL4u0iYixAity/pub?gid=0&single=true&output=csv"
     
     # 加上 try-except 以防網路連線問題
     try:
