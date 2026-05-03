@@ -132,7 +132,7 @@ elif page == "📡 AI 即時情報雷達":
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
         # 下面這一行就是原本報錯的 line 140，現在已對齊 try 內部的縮進
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = 'models/gemini-pro'
     except Exception as e:
         st.error("請在 Secrets 中設定 GEMINI_API_KEY 或檢查 API 設定。")
         st.stop()
