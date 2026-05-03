@@ -124,88 +124,59 @@ elif page == "📦 庫存管理中心 (CRUD)":
 # ==========================================
 # 模組 C：AI 即時情報雷達
 # ==========================================
-# ==========================================
-# 模組 C：AI 即時情報雷達 (強化穩定版)
-# ==========================================
 elif page == "📡 AI 即時情報雷達":
     st.title("📡 SupplySmart：即時 AI 情報雷達")
     
-    # 1. 更加穩健的初始化
+    # 初始化 Gemini (注意：這裡每一行前面必須是 4 個空格的倍數)
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        
-        # 💡 [關鍵修正]：嘗試使用不帶 models/ 前綴的簡短名稱，這是目前 Streamlit 雲端最穩定的寫法
-        # 如果還是不行，可以嘗試換成 'gemini-1.5-flash-latest'
-       model = genai.GenerativeModel('gemini-1.5-flash')
+        # 下面這一行就是原本報錯的 line 140，現在已對齊 try 內部的縮進
+        model = genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
-        st.error(f"⚠️ AI 引擎初始化失敗：{e}")
+        st.error("請在 Secrets 中設定 GEMINI_API_KEY 或檢查 API 設定。")
         st.stop()
 
     if st.button("🚀 啟動即時新聞掃描", type="primary"):
-        # 2. 抓取新聞 (以你提供的 00662 為例)
-        with st.spinner("正在掃描全球財經新聞..."):
-            feed = feedparser.parse("https://tw.news.yahoo.com/rss/finance")
-            items = feed.entries[:3]
+        # 抓取 Yahoo 財經新聞
+        feed = feedparser.parse("https://tw.news.yahoo.com/rss/finance")
+        items = feed.entries[:3]
         
         if not items:
-            st.info("目前沒有最新新聞。")
+            st.info("目前抓取不到新聞。")
         else:
             st.success(f"✅ 成功抓取 {len(items)} 篇新聞，AI 分析中...")
             cols = st.columns(3)
             
             for idx, entry in enumerate(items):
-            with cols[idx]:
-                st.markdown(f"**📰 {entry.title}**")
-                
-                # 3. 強化型 Prompt (要求 AI 回傳純文字 JSON)
-                prompt = f"""
-                分析以下新聞標題對供應鏈或科技產業的風險。
-                你必須「僅」回傳 JSON 格式的內容，不要包含任何 Markdown 標記 (如 ```json) 或解釋。
-                
-                格式範例：
-                {{"Risk": "High", "Reason": "理由..."}}
-                
-                新聞標題：{entry.title}
-                """
-                
-                try:
-                    # 呼叫 Gemini
-                    response = model.generate_content(prompt)
+                with cols[idx]:
+                    st.markdown(f"**📰 {entry.title}**")
                     
-                    if response and response.text:
-                        # 💡 核心修正：手動清理 Markdown 標籤，防止 json.loads 失敗
-                        raw_text = response.text.strip()
-                        clean_json = raw_text.replace('```json', '').replace('```', '').strip()
-                        
-                        try:
+                    # 強化型 Prompt
+                    prompt = f"""
+                    分析以下新聞標題對供應鏈或科技產業的風險。
+                    你必須「僅」回傳 JSON 格式的內容，不要包含任何 Markdown 標記 (如 ```json)。
+                    格式：{{"Risk": "High/Med/Low/None", "Reason": "理由"}}
+                    新聞標題：{entry.title}
+                    """
+                    
+                    try:
+                        response = model.generate_content(prompt)
+                        if response and response.text:
+                            # 清理字串並解析
+                            clean_json = response.text.replace('```json', '').replace('```', '').strip()
                             res = json.loads(clean_json)
                             risk = res.get('Risk', 'None')
-                            reason = res.get('Reason', '無法取得分析理由')
+                            reason = res.get('Reason', '無理由')
                             
-                            # UI 顯示邏輯
-                            if risk == "High":
-                                st.error(f"🚨 判定：{risk}")
-                            elif risk == "Med" or risk == "Medium":
-                                st.warning(f"⚠️ 判定：{risk}")
-                            elif risk == "Low":
-                                st.info(f"🟢 判定：{risk}")
-                            else:
-                                st.success(f"✅ 判定：None/Safe")
-                                
+                            if risk == "High": st.error(f"🚨 判定：{risk}")
+                            elif risk in ["Med", "Medium"]: st.warning(f"⚠️ 判定：{risk}")
+                            elif risk == "Low": st.info(f"🟢 判定：{risk}")
+                            else: st.success(f"✅ 判定：None")
+                            
                             st.caption(f"🧠 AI 理由：{reason}")
-                            
-                        except json.JSONDecodeError:
-                            st.info("😶 AI 回傳格式不符，初步摘要如下：")
-                            st.write(clean_json[:100] + "...")
-                    else:
-                        st.write("😶 AI 暫時無法解讀內容")
-                        
-                except Exception as ai_err:
-                    st.error("❌ AI 運算連線失敗")
-                    # 這裡可以幫你檢查是否是因為 API Key 或型號設定問題
-                    if "404" in str(ai_err):
-                        st.info("💡 偵測到 404 錯誤：請確認你的模型名稱是否正確（建議用 gemini-1.5-flash）。")
-                    st.expander("詳細錯誤診斷").code(str(ai_err))
-                
-                st.markdown(f"[原文連結]({entry.link})")
+                    except Exception as ai_err:
+                        st.error("❌ AI 判讀失敗")
+                        st.expander("診斷日誌").code(str(ai_err))
+                    
+                    st.markdown(f"[原文連結]({entry.link})")
