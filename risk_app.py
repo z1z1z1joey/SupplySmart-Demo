@@ -161,3 +161,41 @@ elif page == "📦 庫存管理中心 (CRUD)":
     if st.button("💾 將變更存回實體 CSV 檔案", type="primary"):
         edited_df.to_csv(csv_file, index=False)
         st.success("✅ 資料已成功寫入 `inventory_local.csv`！你可以打開該檔案檢查看看。")
+
+
+    # ... (前面是原本的 CRUD 表格與儲存按鈕) ...
+    # if st.button("💾 將變更存回實體 CSV 檔案", type="primary"):
+    #     edited_df.to_csv(csv_file, index=False)
+    #     st.success("✅ 資料已成功寫入 `inventory_local.csv`！你可以打開該檔案檢查看看。")
+
+    st.divider() # 畫一條分隔線
+    
+    # ==========================================
+    # 開發者後台：查看雲端生成的 CSV 檔案
+    # ==========================================
+    st.subheader("🛠️ 開發者後台：雲端檔案檢視")
+    st.write("在 Streamlit 雲端環境中，雖然你看不到實體資料夾，但可以透過這裡確認檔案是否真的生成，並將其下載。")
+
+    # 檢查檔案到底存不存在雲端主機上
+    if os.path.exists(csv_file):
+        st.success(f"檔案狀態：系統確認雲端主機上確實存在 `{csv_file}`")
+        
+        # 讀取剛剛存好的檔案內容
+        with open(csv_file, "rb") as file:
+            csv_data = file.read()
+            
+            # 建立一個下載按鈕
+            st.download_button(
+                label="📥 點我下載雲端上的 inventory_local.csv",
+                data=csv_data,
+                file_name="inventory_local_cloud_backup.csv",
+                mime="text/csv",
+            )
+            
+        # 在網頁上直接把 CSV 檔案的「原始碼」印出來給你看
+        with st.expander("👀 點擊偷看 CSV 檔案內的原始純文字 (Raw Data)"):
+            with open(csv_file, "r", encoding="utf-8") as f:
+                raw_text = f.read()
+                st.code(raw_text, language="csv")
+    else:
+        st.error(f"檔案狀態：目前雲端主機上找不到 `{csv_file}`。請先在上方表格隨便改個數字並按下儲存！")
