@@ -138,7 +138,7 @@ elif page == "📡 AI 即時情報雷達":
         # 💡 [關鍵修正]：嘗試使用不帶 models/ 前綴的簡短名稱，這是目前 Streamlit 雲端最穩定的寫法
         # 如果還是不行，可以嘗試換成 'gemini-1.5-flash-latest'
         model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
+            model_name='gemini-1.5-flash-latest',
             generation_config={"response_mime_type": "application/json"}
         )
     except Exception as e:
