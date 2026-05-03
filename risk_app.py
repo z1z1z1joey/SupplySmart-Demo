@@ -131,7 +131,9 @@ elif page == "📡 AI 即時情報雷達":
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash', generation_config={"response_mime_type": "application/json"})
+        model = genai.GenerativeModel(
+            'models/gemini-1.5-flash-latest',
+            generation_config={"response_mime_type": "application/json"})
     except:
         st.error("請在 Secrets 中設定 GEMINI_API_KEY")
         st.stop()
