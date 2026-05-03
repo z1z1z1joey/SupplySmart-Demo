@@ -31,7 +31,7 @@ def init_connection():
 try:
     client = init_connection()
     # ⚠️ 這裡請換成你的真實 Google Sheets 網址
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/1vQoxb_vbiOKkp-a229cpLDFXZl5G5VEO6nqnvSFwpK-l21CvCIY_wAfUfBGvAgu-MDGL4u0iYixAity/edit"
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/1Nc3WJ3vD7YvtY1s54pKwTMwZjNLDFMy1dh94Nu0BA9M/edit"
 except Exception as e:
     st.error(f"Google Sheets 連線初始化失敗，請檢查 Secrets 設定。錯誤：{e}")
     st.stop()
