@@ -137,10 +137,7 @@ elif page == "📡 AI 即時情報雷達":
         
         # 💡 [關鍵修正]：嘗試使用不帶 models/ 前綴的簡短名稱，這是目前 Streamlit 雲端最穩定的寫法
         # 如果還是不行，可以嘗試換成 'gemini-1.5-flash-latest'
-        model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash-latest',
-            generation_config={"response_mime_type": "application/json"}
-        )
+       model = genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
         st.error(f"⚠️ AI 引擎初始化失敗：{e}")
         st.stop()
@@ -158,40 +155,57 @@ elif page == "📡 AI 即時情報雷達":
             cols = st.columns(3)
             
             for idx, entry in enumerate(items):
-                with cols[idx]:
-                    st.markdown(f"**📰 {entry.title}**")
+            with cols[idx]:
+                st.markdown(f"**📰 {entry.title}**")
+                
+                # 3. 強化型 Prompt (要求 AI 回傳純文字 JSON)
+                prompt = f"""
+                分析以下新聞標題對供應鏈或科技產業的風險。
+                你必須「僅」回傳 JSON 格式的內容，不要包含任何 Markdown 標記 (如 ```json) 或解釋。
+                
+                格式範例：
+                {{"Risk": "High", "Reason": "理由..."}}
+                
+                新聞標題：{entry.title}
+                """
+                
+                try:
+                    # 呼叫 Gemini
+                    response = model.generate_content(prompt)
                     
-                    # 3. 強化型 Prompt 與錯誤處理
-                    prompt = f"""
-                    分析以下新聞標題對供應鏈或科技產業的風險。
-                    請嚴格以 JSON 格式回傳，格式如下：
-                    {{"Risk": "High/Med/Low/None", "Reason": "簡短理由"}}
-                    
-                    新聞標題：{entry.title}
-                    """
-                    
-                    try:
-                        # 💡 [關鍵修正]：增加超時設定與錯誤捕捉
-                        response = model.generate_content(prompt)
+                    if response and response.text:
+                        # 💡 核心修正：手動清理 Markdown 標籤，防止 json.loads 失敗
+                        raw_text = response.text.strip()
+                        clean_json = raw_text.replace('```json', '').replace('```', '').strip()
                         
-                        # 檢查 response 是否有內容
-                        if response and response.text:
-                            res = json.loads(response.text)
-                            risk = res.get('Risk', 'Unknown')
-                            reason = res.get('Reason', '無分析資料')
+                        try:
+                            res = json.loads(clean_json)
+                            risk = res.get('Risk', 'None')
+                            reason = res.get('Reason', '無法取得分析理由')
                             
-                            if risk == "High": st.error(f"判定：{risk}")
-                            elif risk == "Med": st.warning(f"判定：{risk}")
-                            else: st.success(f"判定：{risk}")
-                            
+                            # UI 顯示邏輯
+                            if risk == "High":
+                                st.error(f"🚨 判定：{risk}")
+                            elif risk == "Med" or risk == "Medium":
+                                st.warning(f"⚠️ 判定：{risk}")
+                            elif risk == "Low":
+                                st.info(f"🟢 判定：{risk}")
+                            else:
+                                st.success(f"✅ 判定：None/Safe")
+                                
                             st.caption(f"🧠 AI 理由：{reason}")
-                        else:
-                            st.write("😶 AI 暫時無法解讀此內容")
                             
-                    except Exception as ai_err:
-                        # 如果 JSON 模式出錯，顯示具體建議
-                        st.error("❌ AI 判讀發生 NotFound")
-                        st.info("💡 解決建議：請去 Google Cloud Console 確認 'Generative Language API' 是否已啟用。")
-                        st.expander("詳細錯誤日誌").code(str(ai_err))
-                    
-                    st.markdown(f"[原文連結]({entry.link})")
+                        except json.JSONDecodeError:
+                            st.info("😶 AI 回傳格式不符，初步摘要如下：")
+                            st.write(clean_json[:100] + "...")
+                    else:
+                        st.write("😶 AI 暫時無法解讀內容")
+                        
+                except Exception as ai_err:
+                    st.error("❌ AI 運算連線失敗")
+                    # 這裡可以幫你檢查是否是因為 API Key 或型號設定問題
+                    if "404" in str(ai_err):
+                        st.info("💡 偵測到 404 錯誤：請確認你的模型名稱是否正確（建議用 gemini-1.5-flash）。")
+                    st.expander("詳細錯誤診斷").code(str(ai_err))
+                
+                st.markdown(f"[原文連結]({entry.link})")
