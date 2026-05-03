@@ -27,7 +27,7 @@ def init_connection():
 client = init_connection()
 
 # ⚠️ 請把下面這行換成你真實的 Google Sheets 編輯網址
-SHEET_URL = "https://docs.google.com/spreadsheets/d/請替換成你的真實試算表ID/edit"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1Nc3WJ3vD7YvtY1s54pKwTMwZjNLDFMy1dh94Nu0BA9M/edit"
 
 # ==========================================
 # 左側側邊欄 (導覽選單)
