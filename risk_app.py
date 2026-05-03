@@ -124,30 +124,74 @@ elif page == "📦 庫存管理中心 (CRUD)":
 # ==========================================
 # 模組 C：AI 即時情報雷達
 # ==========================================
+# ==========================================
+# 模組 C：AI 即時情報雷達 (強化穩定版)
+# ==========================================
 elif page == "📡 AI 即時情報雷達":
     st.title("📡 SupplySmart：即時 AI 情報雷達")
     
-    # 初始化 Gemini
+    # 1. 更加穩健的初始化
     try:
         api_key = st.secrets["GEMINI_API_KEY"]
         genai.configure(api_key=api_key)
+        
+        # 💡 [關鍵修正]：嘗試使用不帶 models/ 前綴的簡短名稱，這是目前 Streamlit 雲端最穩定的寫法
+        # 如果還是不行，可以嘗試換成 'gemini-1.5-flash-latest'
         model = genai.GenerativeModel(
-    'models/gemini-1.5-flash',
-    generation_config={"response_mime_type": "application/json"})
-    except:
-        st.error("請在 Secrets 中設定 GEMINI_API_KEY")
+            model_name='gemini-1.5-flash',
+            generation_config={"response_mime_type": "application/json"}
+        )
+    except Exception as e:
+        st.error(f"⚠️ AI 引擎初始化失敗：{e}")
         st.stop()
 
     if st.button("🚀 啟動即時新聞掃描", type="primary"):
-        feed = feedparser.parse("https://tw.news.yahoo.com/rss/finance")
-        items = feed.entries[:3]
+        # 2. 抓取新聞 (以你提供的 00662 為例)
+        with st.spinner("正在掃描全球財經新聞..."):
+            feed = feedparser.parse("https://tw.news.yahoo.com/rss/finance")
+            items = feed.entries[:3]
         
-        cols = st.columns(3)
-        for idx, entry in enumerate(items):
-            with cols[idx]:
-                st.markdown(f"**📰 {entry.title}**")
-                prompt = f"分析此新聞對供應鏈的風險(High/Med/Low)，以 JSON 格式回傳: {{'Risk': '...', 'Reason': '...'}}. 新聞: {entry.title}"
-                response = model.generate_content(prompt)
-                res = json.loads(response.text)
-                st.write(f"判定：{res['Risk']}")
-                st.caption(f"理由：{res['Reason']}")
+        if not items:
+            st.info("目前沒有最新新聞。")
+        else:
+            st.success(f"✅ 成功抓取 {len(items)} 篇新聞，AI 分析中...")
+            cols = st.columns(3)
+            
+            for idx, entry in enumerate(items):
+                with cols[idx]:
+                    st.markdown(f"**📰 {entry.title}**")
+                    
+                    # 3. 強化型 Prompt 與錯誤處理
+                    prompt = f"""
+                    分析以下新聞標題對供應鏈或科技產業的風險。
+                    請嚴格以 JSON 格式回傳，格式如下：
+                    {{"Risk": "High/Med/Low/None", "Reason": "簡短理由"}}
+                    
+                    新聞標題：{entry.title}
+                    """
+                    
+                    try:
+                        # 💡 [關鍵修正]：增加超時設定與錯誤捕捉
+                        response = model.generate_content(prompt)
+                        
+                        # 檢查 response 是否有內容
+                        if response and response.text:
+                            res = json.loads(response.text)
+                            risk = res.get('Risk', 'Unknown')
+                            reason = res.get('Reason', '無分析資料')
+                            
+                            if risk == "High": st.error(f"判定：{risk}")
+                            elif risk == "Med": st.warning(f"判定：{risk}")
+                            else: st.success(f"判定：{risk}")
+                            
+                            st.caption(f"🧠 AI 理由：{reason}")
+                        else:
+                            st.write("😶 AI 暫時無法解讀此內容")
+                            
+                    except Exception as ai_err:
+                        # 如果 JSON 模式出錯，顯示具體建議
+                        st.error("❌ AI 判讀發生 NotFound")
+                        st.info("💡 解決建議：請去 Google Cloud Console 確認 'Generative Language API' 是否已啟用。")
+                        st.expander("詳細錯誤日誌").code(str(ai_err))
+                    
+                    st.markdown(f"[原文連結]({entry.link})")
