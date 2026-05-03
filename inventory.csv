@@ -1,0 +1,4 @@
+Item_ID,Item_Name,Current_Stock,Safety_Stock,In_Transit,Supplier,Unit_Cost
+IC-CTRL-77,關鍵控制器模組,50000,45000,10000,TechSource,12.5
+PM-99,電源管理 IC,15000,20000,0,EuroConnect,8.0
+CBL-001,連接線套件,8000,10000,5000,AsiaChip,1.2
