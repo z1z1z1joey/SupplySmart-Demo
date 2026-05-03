@@ -116,3 +116,38 @@ elif st.session_state.step == 4:
     if st.button("🔄 完成並返回首頁"):
         st.session_state.step = 1
         st.rerun()
+
+
+import streamlit as st
+import pandas as pd
+
+st.title("📦 庫存管理中心 (CRUD 實作)")
+
+# 1. 讀取或初始化資料 (Read)
+# 這裡我們用 session_state 讓網頁記住你修改過的資料
+if 'inventory_df' not in st.session_state:
+    st.session_state.inventory_df = pd.DataFrame({
+        "料號": ["IC-CTRL-77", "PM-99", "CBL-001"],
+        "品名": ["控制器模組", "電源管理 IC", "連接線套件"],
+        "當前庫存": [50000, 15000, 8000]
+    })
+
+st.write("你可以直接在下方表格內點擊修改數字、在最下方點擊 '+' 新增，或選取行按 Delete 刪除。")
+
+# 2. 開啟互動式編輯器 (Create, Update, Delete 一次搞定)
+# num_rows="dynamic" 允許使用者新增或刪除資料列
+edited_df = st.data_editor(
+    st.session_state.inventory_df,
+    num_rows="dynamic",
+    use_container_width=True
+)
+
+# 3. 儲存變更按鈕
+if st.button("💾 儲存所有變更", type="primary"):
+    # 將修改後的資料存回系統記憶體
+    st.session_state.inventory_df = edited_df
+    
+    # 實務上，你可以在這裡加入程式碼，把 edited_df 存回 CSV 或 Google Sheets
+    # 例如：edited_df.to_csv("inventory.csv", index=False)
+    
+    st.success("✅ 資料庫已成功更新！")
